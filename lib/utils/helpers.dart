@@ -59,9 +59,17 @@ class Helpers {
 
   // Show snackbar
   static void showSnackBar(context, String message, {bool isError = false}) {
+    final sanitized = message.replaceAll('\n', ' ').trim();
+    final displayMessage = sanitized.length > 80
+        ? '${sanitized.substring(0, 77)}...'
+        : sanitized;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
+        content: Text(
+          displayMessage,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: isError ? Colors.red : Colors.green,
         duration: const Duration(seconds: 2),
       ),
