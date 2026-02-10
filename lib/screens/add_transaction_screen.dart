@@ -8,6 +8,7 @@ import '../models/transaction_model.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/transaction_change_notifier.dart';
+import '../utils/notification_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int userId;
@@ -32,6 +33,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   String _selectedType = AppConstants.transactionTypeGiven;
   DateTime _selectedDate = DateTime.now();
+  DateTime? _expectedSettlementDate;
   bool _isLoading = false;
 
   @override
@@ -44,6 +46,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _reasonController.text = widget.transaction!.reason;
       _selectedType = widget.transaction!.transactionType;
       _selectedDate = DateTime.parse(widget.transaction!.transactionDate);
+      if (widget.transaction!.expectedSettlementDate != null) {
+        _expectedSettlementDate = DateTime.parse(
+          widget.transaction!.expectedSettlementDate!,
+        );
+      }
     }
   }
 
@@ -73,6 +80,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     if (picked != null && picked != _selectedDate) {
       setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _selectExpectedSettlementDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _expectedSettlementDate ?? _selectedDate,
+      firstDate: _selectedDate,
+      lastDate: DateTime(2100),
+      builder: (context, child) {
+        final theme = Theme.of(context);
+        return Theme(
+          data: theme.copyWith(colorScheme: theme.colorScheme),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => _expectedSettlementDate = picked);
     }
   }
 
@@ -112,17 +139,29 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         transactionDate: DateFormat(
           AppConstants.dateFormat,
         ).format(_selectedDate),
+        expectedSettlementDate: _expectedSettlementDate != null
+            ? DateFormat(
+                AppConstants.dateFormat,
+              ).format(_expectedSettlementDate!)
+            : null,
         isSettled: widget.transaction?.isSettled ?? false,
         createdAt:
             widget.transaction?.createdAt ?? Helpers.getCurrentDateTime(),
       );
 
       if (widget.transaction == null) {
-        await DatabaseHelper.instance.createTransaction(transaction);
+        final created = await DatabaseHelper.instance.createTransaction(
+          transaction,
+        );
         if (mounted) {
           Helpers.showSnackBar(context, 'Transaction added successfully!');
           // Notify dashboard of new transaction
           context.read<TransactionChangeNotifier>().notifyTransactionAdded();
+          if (!created.isSettled && created.expectedSettlementDate != null) {
+            await NotificationService.instance.scheduleSettlementReminder(
+              created,
+            );
+          }
         }
       } else {
         await DatabaseHelper.instance.updateTransaction(transaction);
@@ -130,6 +169,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           Helpers.showSnackBar(context, 'Transaction updated successfully!');
           // Notify dashboard of transaction update
           context.read<TransactionChangeNotifier>().notifyTransactionUpdated();
+          if (transaction.id != null) {
+            await NotificationService.instance.cancelSettlementReminder(
+              transaction.id!,
+            );
+            if (!transaction.isSettled &&
+                transaction.expectedSettlementDate != null) {
+              await NotificationService.instance.scheduleSettlementReminder(
+                transaction,
+              );
+            }
+          }
         }
       }
 
@@ -377,6 +427,74 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           color: colorScheme.onSurface,
                         ),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 32.h),
+
+              // Expected Settlement Date
+              Text(
+                'Expected Settlement Date (Optional)',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              SizedBox(height: 8.h),
+              InkWell(
+                onTap: _selectExpectedSettlementDate,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 16.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(
+                      color: isDark
+                          ? colorScheme.primary.withOpacity(0.3)
+                          : Colors.grey.shade400,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.event,
+                        color: isDark
+                            ? colorScheme.primary
+                            : Colors.grey.shade700,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          _expectedSettlementDate != null
+                              ? DateFormat(
+                                  AppConstants.displayDateFormat,
+                                ).format(_expectedSettlementDate!)
+                              : 'Select expected settlement date',
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            color: _expectedSettlementDate != null
+                                ? colorScheme.onSurface
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (_expectedSettlementDate != null)
+                        IconButton(
+                          onPressed: () =>
+                              setState(() => _expectedSettlementDate = null),
+                          icon: Icon(
+                            Icons.close,
+                            size: 18.sp,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                          tooltip: 'Clear date',
+                        ),
                     ],
                   ),
                 ),

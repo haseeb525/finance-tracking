@@ -8,6 +8,7 @@ Finance Tracking is a mobile application that allows users to:
 - Track transactions between themselves and other individuals
 - Categorize transactions as money given or money taken
 - Maintain settlement status for each transaction
+- Set expected settlement dates with reminders
 - Generate detailed financial reports in Excel format
 - Access transaction history with comprehensive filtering options
 - Monitor net balance and financial summaries
@@ -26,10 +27,16 @@ The application is built using Flutter, providing seamless experience across And
 
 **Transaction Management**
 - Add new transactions with date, amount, person name, contact, reason, and transaction type
+- Optional expected settlement date for each transaction
 - Edit existing transactions with full update capability
 - Delete transactions with confirmation dialog
 - Mark transactions as settled or unsettled
 - Transaction categorization as given or taken
+
+**Notifications**
+- Local reminder notifications for expected settlement dates
+- Detailed notification messages with person name, amount, and due date
+- In-app notification section for upcoming settlements
 
 **Dashboard**
 - Real-time summary of total money given and total money taken
@@ -37,6 +44,7 @@ The application is built using Flutter, providing seamless experience across And
 - Recent transactions list showing the 10 most recent transactions
 - Instant updates when transactions are added, modified, or deleted
 - Visual indicators for transaction types with color coding
+- In-app notification section for upcoming settlement reminders
 
 **Transaction Management Screens**
 - All Transactions view with comprehensive listing
@@ -102,6 +110,7 @@ lib/
 │   ├── helpers.dart            # Helper functions
 │   ├── app_theme.dart          # Theme definitions
 │   ├── theme_provider.dart     # Theme state management
+│   ├── notification_service.dart  # Local notification scheduling
 │   └── transaction_change_notifier.dart  # Real-time update notifier
 └── widgets/                     # Reusable widgets
     ├── transaction_card.dart   # Transaction list item widget
@@ -158,6 +167,10 @@ lib/
 **File Handling**
 - android_intent_plus: Android intent handling
 - open_file: Open files with default applications
+
+**Notifications**
+- flutter_local_notifications: Scheduled local notifications
+- timezone: Time zone support for notification scheduling
 
 **UI/UX**
 - cupertino_icons: iOS style icons
@@ -221,7 +234,8 @@ flutter build ios --release
 3. Select transaction type: Money Given or Money Taken
 4. Fill in person name, contact, amount, and reason
 5. Select the transaction date
-6. Tap Save to add the transaction
+6. Optionally select the expected settlement date
+7. Tap Save to add the transaction
 
 ### Managing Transactions
 
@@ -239,6 +253,12 @@ flutter build ios --release
 - Open transaction details
 - Tap Mark as Settled or Mark as Unsettled button
 - Dashboard updates in real-time
+
+### Notifications
+
+- Expected settlement dates schedule reminders at the configured time
+- In-app notifications show upcoming settlements on the dashboard
+- Notifications are automatically canceled when a transaction is settled or deleted
 
 ### Generating Reports
 
@@ -284,6 +304,7 @@ Select dates -> Fetch transactions for range -> Create Excel spreadsheet -> Calc
 - amount: REAL
 - reason: TEXT
 - transaction_date: TEXT
+- expected_settlement_date: TEXT (nullable)
 - is_settled: BOOLEAN
 - created_at: TEXT
 

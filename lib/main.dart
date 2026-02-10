@@ -9,9 +9,11 @@ import 'utils/constants.dart';
 import 'utils/app_theme.dart';
 import 'utils/theme_provider.dart';
 import 'utils/transaction_change_notifier.dart';
+import 'utils/notification_service.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.initialize();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,

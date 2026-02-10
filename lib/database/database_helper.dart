@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
+import '../models/partial_settlement_model.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -19,12 +20,18 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 3,
+      onCreate: _createDB,
+      onUpgrade: _upgradeDB,
+    );
   }
 
   Future _createDB(Database db, int version) async {
     const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
     const textType = 'TEXT NOT NULL';
+    const nullableTextType = 'TEXT';
     const realType = 'REAL NOT NULL';
     const intType = 'INTEGER NOT NULL';
 
@@ -46,11 +53,55 @@ class DatabaseHelper {
         amount $realType,
         reason $textType,
         transaction_date $textType,
+        expected_settlement_date $nullableTextType,
         is_settled $intType,
+        settled_amount $realType DEFAULT 0.0,
+        next_settlement_date $nullableTextType,
         created_at $textType,
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE partial_settlements (
+        id $idType,
+        transaction_id $intType,
+        settled_amount $realType,
+        settlement_date $textType,
+        next_settlement_date $nullableTextType,
+        created_at $textType,
+        FOREIGN KEY (transaction_id) REFERENCES transactions (id)
+      )
+    ''');
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN expected_settlement_date TEXT',
+      );
+    }
+    if (oldVersion < 3) {
+      // Add partial settlement columns
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN settled_amount REAL DEFAULT 0.0',
+      );
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN next_settlement_date TEXT',
+      );
+      // Create partial_settlements table
+      await db.execute('''
+        CREATE TABLE partial_settlements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transaction_id INTEGER NOT NULL,
+          settled_amount REAL NOT NULL,
+          settlement_date TEXT NOT NULL,
+          next_settlement_date TEXT,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (transaction_id) REFERENCES transactions (id)
+        )
+      ''');
+    }
   }
 
   // User operations
@@ -145,6 +196,22 @@ class DatabaseHelper {
     return maps.map((map) => TransactionModel.fromMap(map)).toList();
   }
 
+  Future<List<TransactionModel>> getUpcomingSettlements(
+    int userId,
+    String fromDate,
+  ) async {
+    final db = await database;
+    final maps = await db.query(
+      'transactions',
+      where:
+          'user_id = ? AND is_settled = 0 AND expected_settlement_date IS NOT NULL AND expected_settlement_date >= ?',
+      whereArgs: [userId, fromDate],
+      orderBy: 'expected_settlement_date ASC',
+    );
+
+    return maps.map((map) => TransactionModel.fromMap(map)).toList();
+  }
+
   Future<int> updateTransaction(TransactionModel transaction) async {
     final db = await database;
     return db.update(
@@ -187,6 +254,26 @@ class DatabaseHelper {
     );
 
     return maps.map((map) => map['person_name'] as String).toList();
+  }
+
+  // Partial Settlement operations
+  Future<int> createPartialSettlement(dynamic partialSettlement) async {
+    final db = await database;
+    return await db.insert('partial_settlements', partialSettlement.toMap());
+  }
+
+  Future<List<PartialSettlementModel>> getPartialSettlements(
+    int transactionId,
+  ) async {
+    final db = await database;
+    final maps = await db.query(
+      'partial_settlements',
+      where: 'transaction_id = ?',
+      whereArgs: [transactionId],
+      orderBy: 'settlement_date DESC',
+    );
+
+    return maps.map((map) => PartialSettlementModel.fromMap(map)).toList();
   }
 
   Future close() async {

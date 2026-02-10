@@ -7,7 +7,10 @@ class TransactionModel {
   final double amount;
   final String reason;
   final String transactionDate;
+  final String? expectedSettlementDate;
   final bool isSettled;
+  final double settledAmount; // Amount already settled (partial)
+  final String? nextSettlementDate; // Next expected settlement date
   final String createdAt;
 
   TransactionModel({
@@ -19,7 +22,10 @@ class TransactionModel {
     required this.amount,
     required this.reason,
     required this.transactionDate,
+    this.expectedSettlementDate,
     required this.isSettled,
+    this.settledAmount = 0.0,
+    this.nextSettlementDate,
     required this.createdAt,
   });
 
@@ -33,7 +39,10 @@ class TransactionModel {
       'amount': amount,
       'reason': reason,
       'transaction_date': transactionDate,
+      'expected_settlement_date': expectedSettlementDate,
       'is_settled': isSettled ? 1 : 0,
+      'settled_amount': settledAmount,
+      'next_settlement_date': nextSettlementDate,
       'created_at': createdAt,
     };
   }
@@ -48,7 +57,10 @@ class TransactionModel {
       amount: map['amount'],
       reason: map['reason'],
       transactionDate: map['transaction_date'],
+      expectedSettlementDate: map['expected_settlement_date'],
       isSettled: map['is_settled'] == 1,
+      settledAmount: (map['settled_amount'] ?? 0.0).toDouble(),
+      nextSettlementDate: map['next_settlement_date'],
       createdAt: map['created_at'],
     );
   }
@@ -62,7 +74,10 @@ class TransactionModel {
     double? amount,
     String? reason,
     String? transactionDate,
+    String? expectedSettlementDate,
     bool? isSettled,
+    double? settledAmount,
+    String? nextSettlementDate,
     String? createdAt,
   }) {
     return TransactionModel(
@@ -74,7 +89,11 @@ class TransactionModel {
       amount: amount ?? this.amount,
       reason: reason ?? this.reason,
       transactionDate: transactionDate ?? this.transactionDate,
+      expectedSettlementDate:
+          expectedSettlementDate ?? this.expectedSettlementDate,
       isSettled: isSettled ?? this.isSettled,
+      settledAmount: settledAmount ?? this.settledAmount,
+      nextSettlementDate: nextSettlementDate ?? this.nextSettlementDate,
       createdAt: createdAt ?? this.createdAt,
     );
   }

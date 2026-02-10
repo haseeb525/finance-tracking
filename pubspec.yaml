@@ -45,6 +45,8 @@ dependencies:
   provider: ^6.1.5+1
   android_intent_plus: ^6.0.0
   open_file: ^3.5.11
+  flutter_local_notifications: ^20.0.0
+  timezone: ^0.10.1
 
 dev_dependencies:
   flutter_test:

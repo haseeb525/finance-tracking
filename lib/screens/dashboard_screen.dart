@@ -31,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double _totalGiven = 0.0;
   double _totalTaken = 0.0;
   List<TransactionModel> _recentTransactions = [];
+  List<TransactionModel> _upcomingSettlements = [];
 
   @override
   void initState() {
@@ -71,11 +72,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final transactions = await DatabaseHelper.instance.getTransactions(
         widget.userId,
       );
+      final upcoming = await DatabaseHelper.instance.getUpcomingSettlements(
+        widget.userId,
+        Helpers.getCurrentDate(),
+      );
 
       setState(() {
         _totalGiven = summary['given'] ?? 0.0;
         _totalTaken = summary['taken'] ?? 0.0;
         _recentTransactions = transactions.take(10).toList();
+        _upcomingSettlements = upcoming.take(5).toList();
         _isLoading = false;
       });
     } catch (e) {
@@ -198,6 +204,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ],
                       ),
+                      SizedBox(height: 24.h),
+
+                      // In-App Notifications
+                      Text(
+                        'In-App Notifications',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      if (_upcomingSettlements.isEmpty)
+                        Container(
+                          padding: EdgeInsets.all(16.w),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Text(
+                            'No upcoming settlements',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        )
+                      else
+                        Column(
+                          children: _upcomingSettlements.map((transaction) {
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 10.h),
+                              padding: EdgeInsets.all(14.w),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12.r),
+                                border: Border.all(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withOpacity(0.2),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.notifications_active,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    size: 20.sp,
+                                  ),
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '${transaction.personName} - ${Helpers.formatCurrency(transaction.amount)}',
+                                          style: TextStyle(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Text(
+                                          'Due on ${Helpers.formatDate(transaction.expectedSettlementDate!)}',
+                                          style: TextStyle(
+                                            fontSize: 12.sp,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       SizedBox(height: 24.h),
 
                       // Net Balance Card - Futuristic
