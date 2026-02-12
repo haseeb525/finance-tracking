@@ -8,6 +8,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/transaction_change_notifier.dart';
 import '../utils/notification_service.dart';
+import '../utils/drive_backup_service.dart';
 import 'add_transaction_screen.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
@@ -33,8 +34,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   Future<void> _loadPartialSettlements() async {
     if (_transaction.id != null) {
-      final settlements = await DatabaseHelper.instance
-          .getPartialSettlements(_transaction.id!);
+      final settlements = await DatabaseHelper.instance.getPartialSettlements(
+        _transaction.id!,
+      );
       setState(() => _partialSettlements = settlements);
     }
   }
@@ -243,6 +245,17 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   return;
                 }
 
+                if (nextSettlementDate == null) {
+                  if (mounted) {
+                    Helpers.showSnackBar(
+                      context,
+                      'Please select next settlement date',
+                      isError: true,
+                    );
+                  }
+                  return;
+                }
+
                 final totalSettledAmount =
                     _transaction.settledAmount + settledAmount;
                 if (totalSettledAmount > _transaction.amount) {
@@ -260,8 +273,9 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   // Create partial settlement record
                   final now = DateTime.now();
                   final settlementDateStr = now.toString().split(' ')[0];
-                  final nextDateStr =
-                      nextSettlementDate?.toString().split(' ')[0];
+                  final nextDateStr = nextSettlementDate?.toString().split(
+                    ' ',
+                  )[0];
 
                   final settlement = PartialSettlementModel(
                     transactionId: _transaction.id!,
@@ -301,8 +315,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     );
 
                     // Schedule reminder for next settlement
-                    if (nextSettlementDate != null &&
-                        _transaction.id != null) {
+                    if (nextSettlementDate != null && _transaction.id != null) {
                       final updatedWithNextDate = updated.copyWith(
                         expectedSettlementDate: nextDateStr,
                       );
@@ -315,6 +328,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       context
                           .read<TransactionChangeNotifier>()
                           .notifyTransactionUpdated();
+                      // Trigger auto-backup
+                      DriveBackupService.instance.autoBackupNow();
                     }
                   }
                 } catch (e) {
@@ -579,6 +594,116 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                         ),
                         elevation: 2,
                       ),
+                    ),
+                  ],
+                  // Partial Settlement History
+                  if (_partialSettlements.isNotEmpty) ...[
+                    SizedBox(height: 24.h),
+                    Text(
+                      'Settlement History',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _partialSettlements.length,
+                      itemBuilder: (context, index) {
+                        final settlement = _partialSettlements[index];
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 10.h),
+                          padding: EdgeInsets.all(12.w),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(10.r),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Settlement ${index + 1}',
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  Text(
+                                    Helpers.formatCurrency(
+                                      settlement.settledAmount,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.h),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Date:',
+                                    style: TextStyle(
+                                      fontSize: 12.sp,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                  Text(
+                                    Helpers.formatDate(
+                                      settlement.settlementDate,
+                                    ),
+                                    style: TextStyle(fontSize: 12.sp),
+                                  ),
+                                ],
+                              ),
+                              if (settlement.nextSettlementDate != null) ...[
+                                SizedBox(height: 6.h),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Next Due:',
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    Text(
+                                      Helpers.formatDate(
+                                        settlement.nextSettlementDate!,
+                                      ),
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        color: Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ],

@@ -9,6 +9,7 @@ import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/transaction_change_notifier.dart';
 import '../utils/notification_service.dart';
+import '../utils/drive_backup_service.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int userId;
@@ -157,6 +158,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           Helpers.showSnackBar(context, 'Transaction added successfully!');
           // Notify dashboard of new transaction
           context.read<TransactionChangeNotifier>().notifyTransactionAdded();
+          // Trigger auto-backup
+          DriveBackupService.instance.autoBackupNow();
           if (!created.isSettled && created.expectedSettlementDate != null) {
             await NotificationService.instance.scheduleSettlementReminder(
               created,
@@ -169,6 +172,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           Helpers.showSnackBar(context, 'Transaction updated successfully!');
           // Notify dashboard of transaction update
           context.read<TransactionChangeNotifier>().notifyTransactionUpdated();
+          // Trigger auto-backup
+          DriveBackupService.instance.autoBackupNow();
           if (transaction.id != null) {
             await NotificationService.instance.cancelSettlementReminder(
               transaction.id!,

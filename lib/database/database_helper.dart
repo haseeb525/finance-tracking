@@ -256,6 +256,46 @@ class DatabaseHelper {
     return maps.map((map) => map['person_name'] as String).toList();
   }
 
+  Future<List<UserModel>> getAllUsers() async {
+    final db = await database;
+    final maps = await db.query('users', orderBy: 'id ASC');
+    return maps.map((map) => UserModel.fromMap(map)).toList();
+  }
+
+  Future<List<TransactionModel>> getAllTransactions() async {
+    final db = await database;
+    final maps = await db.query('transactions', orderBy: 'id ASC');
+    return maps.map((map) => TransactionModel.fromMap(map)).toList();
+  }
+
+  Future<List<PartialSettlementModel>> getAllPartialSettlements() async {
+    final db = await database;
+    final maps = await db.query('partial_settlements', orderBy: 'id ASC');
+    return maps.map((map) => PartialSettlementModel.fromMap(map)).toList();
+  }
+
+  Future<List<PartialSettlementModel>> getPartialSettlementsByDateRange(
+    int userId,
+    String startDate,
+    String endDate,
+  ) async {
+    final db = await database;
+    final maps = await db.rawQuery(
+      '''
+      SELECT ps.*
+      FROM partial_settlements ps
+      INNER JOIN transactions t ON t.id = ps.transaction_id
+      WHERE t.user_id = ?
+        AND ps.settlement_date >= ?
+        AND ps.settlement_date <= ?
+      ORDER BY ps.settlement_date DESC
+      ''',
+      [userId, startDate, endDate],
+    );
+
+    return maps.map((map) => PartialSettlementModel.fromMap(map)).toList();
+  }
+
   // Partial Settlement operations
   Future<int> createPartialSettlement(dynamic partialSettlement) async {
     final db = await database;
@@ -274,6 +314,43 @@ class DatabaseHelper {
     );
 
     return maps.map((map) => PartialSettlementModel.fromMap(map)).toList();
+  }
+
+  Future<void> replaceAllData({
+    required List<UserModel> users,
+    required List<TransactionModel> transactions,
+    required List<PartialSettlementModel> partialSettlements,
+  }) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete('partial_settlements');
+      await txn.delete('transactions');
+      await txn.delete('users');
+
+      for (final user in users) {
+        await txn.insert(
+          'users',
+          user.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+
+      for (final transaction in transactions) {
+        await txn.insert(
+          'transactions',
+          transaction.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+
+      for (final settlement in partialSettlements) {
+        await txn.insert(
+          'partial_settlements',
+          settlement.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    });
   }
 
   Future close() async {

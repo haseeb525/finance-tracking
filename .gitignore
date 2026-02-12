@@ -43,3 +43,37 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase & Google Services (contains sensitive API keys)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Business & Pricing Information
+PROJECT_COSTING.txt
+*.costing.txt
+pricing.txt
+
+# API Keys and sensitive configuration
+.env
+*.env
+api_keys.dart
+secrets.dart
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.backup
+*.bak
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Debug keystore
+*.jks
+*.keystore
+android/key.properties

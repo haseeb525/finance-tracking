@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import '../database/database_helper.dart';
+import '../models/partial_settlement_model.dart';
 import '../utils/app_theme.dart';
 import '../utils/constants.dart';
 import '../utils/helpers.dart';
@@ -124,6 +125,13 @@ class _ReportGenerationScreenState extends State<ReportGenerationScreen> {
         return;
       }
 
+      final List<PartialSettlementModel> partialSettlements =
+          await DatabaseHelper.instance.getPartialSettlementsByDateRange(
+            widget.userId,
+            startDateStr,
+            endDateStr,
+          );
+
       // Create Excel
       final excel = excel_lib.Excel.createExcel();
       final excel_lib.Sheet sheet = excel['Transactions'];
@@ -137,6 +145,9 @@ class _ReportGenerationScreenState extends State<ReportGenerationScreen> {
         'Amount (PKR)',
         'Reason',
         'Status',
+        'Settled Amount',
+        'Remaining Amount',
+        'Next Settlement Date',
       ];
 
       for (var i = 0; i < headers.length; i++) {
@@ -234,6 +245,42 @@ class _ReportGenerationScreenState extends State<ReportGenerationScreen> {
             )
             .value = excel_lib.TextCellValue(
           transaction.isSettled ? 'Settled' : 'Unsettled',
+        );
+
+        sheet
+            .cell(
+              excel_lib.CellIndex.indexByColumnRow(
+                columnIndex: 7,
+                rowIndex: rowIndex,
+              ),
+            )
+            .value = excel_lib.DoubleCellValue(
+          transaction.settledAmount,
+        );
+
+        sheet
+            .cell(
+              excel_lib.CellIndex.indexByColumnRow(
+                columnIndex: 8,
+                rowIndex: rowIndex,
+              ),
+            )
+            .value = excel_lib.DoubleCellValue(
+          transaction.amount - transaction.settledAmount,
+        );
+
+        final nextDate =
+            transaction.nextSettlementDate ??
+            transaction.expectedSettlementDate;
+        sheet
+            .cell(
+              excel_lib.CellIndex.indexByColumnRow(
+                columnIndex: 9,
+                rowIndex: rowIndex,
+              ),
+            )
+            .value = excel_lib.TextCellValue(
+          nextDate ?? '',
         );
 
         if (transaction.transactionType == AppConstants.transactionTypeGiven) {
@@ -338,6 +385,120 @@ class _ReportGenerationScreenState extends State<ReportGenerationScreen> {
           .cellStyle = excel_lib.CellStyle(
         bold: true,
       );
+
+      if (partialSettlements.isNotEmpty) {
+        final excel_lib.Sheet settlementSheet = excel['Partial Settlements'];
+
+        final settlementHeaders = [
+          'Settlement Date',
+          'Transaction ID',
+          'Person Name',
+          'Contact',
+          'Settled Amount',
+          'Next Settlement Date',
+          'Created At',
+        ];
+
+        for (var i = 0; i < settlementHeaders.length; i++) {
+          final cell = settlementSheet.cell(
+            excel_lib.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0),
+          );
+          cell.value = excel_lib.TextCellValue(settlementHeaders[i]);
+          cell.cellStyle = excel_lib.CellStyle(
+            bold: true,
+            backgroundColorHex: excel_lib.ExcelColor.blue,
+            fontColorHex: excel_lib.ExcelColor.white,
+          );
+        }
+
+        final transactionMap = {
+          for (final transaction in transactions)
+            if (transaction.id != null) transaction.id!: transaction,
+        };
+
+        for (var i = 0; i < partialSettlements.length; i++) {
+          final settlement = partialSettlements[i];
+          final rowIndex = i + 1;
+          final transaction = transactionMap[settlement.transactionId];
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 0,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.TextCellValue(
+            Helpers.formatDateForReport(settlement.settlementDate),
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 1,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.IntCellValue(
+            settlement.transactionId,
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 2,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.TextCellValue(
+            transaction?.personName ?? 'Unknown',
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 3,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.TextCellValue(
+            transaction?.personContact ?? '',
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 4,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.DoubleCellValue(
+            settlement.settledAmount,
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 5,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.TextCellValue(
+            settlement.nextSettlementDate ?? '',
+          );
+
+          settlementSheet
+              .cell(
+                excel_lib.CellIndex.indexByColumnRow(
+                  columnIndex: 6,
+                  rowIndex: rowIndex,
+                ),
+              )
+              .value = excel_lib.TextCellValue(
+            settlement.createdAt,
+          );
+        }
+      }
 
       // Save file
       final directory = await getExternalStorageDirectory();

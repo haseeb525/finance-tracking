@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../models/transaction_model.dart';
+import '../utils/constants.dart';
 import '../utils/helpers.dart';
 import '../utils/app_theme.dart';
 import '../utils/transaction_change_notifier.dart';
+import '../utils/drive_backup_service.dart';
 import '../widgets/transaction_card.dart';
 import '../widgets/theme_toggle.dart';
 import 'add_transaction_screen.dart';
+import 'backup_restore_screen.dart';
+import 'google_signin_screen.dart';
 import 'transaction_list_screen.dart';
 import 'report_generation_screen.dart';
 
@@ -131,6 +136,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _navigateToBackupRestore() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BackupRestoreScreen()),
+    );
+  }
+
+  Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await DriveBackupService.instance.signOut();
+        // Clear local session
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(AppConstants.keyUserId);
+        await prefs.remove(AppConstants.keyUsername);
+
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const GoogleSignInScreen()),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          Helpers.showSnackBar(
+            context,
+            'Sign out failed: ${e.toString()}',
+            isError: true,
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -160,7 +216,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: _navigateToReports,
             tooltip: 'Generate Reports',
           ),
+          IconButton(
+            icon: Icon(
+              Icons.cloud_sync,
+              color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,
+              size: 24.sp,
+            ),
+            onPressed: _navigateToBackupRestore,
+            tooltip: 'Backup & Restore',
+          ),
           const ThemeToggle(),
+          PopupMenuButton(
+            onSelected: (value) {
+              if (value == 'signout') {
+                _signOut();
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'signout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18.sp, color: Colors.red),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Sign Out',
+                      style: TextStyle(color: Colors.red, fontSize: 14.sp),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            icon: Icon(
+              Icons.more_vert,
+              color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,
+              size: 24.sp,
+            ),
+          ),
           SizedBox(width: 8.w),
         ],
       ),

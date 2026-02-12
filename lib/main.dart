@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
-import 'screens/signup_screen.dart';
+import 'screens/google_signin_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'utils/constants.dart';
 import 'utils/app_theme.dart';
@@ -13,6 +14,7 @@ import 'utils/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   await NotificationService.instance.initialize();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -79,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (mounted) {
       if (userId != null && username != null) {
-        // User already signed up, go to dashboard
+        // User already signed in, go to dashboard
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) =>
@@ -87,9 +89,9 @@ class _SplashScreenState extends State<SplashScreen> {
           ),
         );
       } else {
-        // New user, go to signup
+        // No user session, go to Google Sign-In
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const SignupScreen()),
+          MaterialPageRoute(builder: (context) => const GoogleSignInScreen()),
         );
       }
     }
