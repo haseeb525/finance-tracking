@@ -25,6 +25,13 @@ class NotificationService {
     );
 
     await _notifications.initialize(settings: initSettings);
+
+    // Request notification permissions for Android 13+
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
   }
 
   Future<void> scheduleSettlementReminder(TransactionModel transaction) async {
@@ -61,17 +68,52 @@ class NotificationService {
 
     const details = NotificationDetails(android: androidDetails);
 
-    await _notifications.zonedSchedule(
-      id: transaction.id!,
-      title: title,
-      body: body,
-      scheduledDate: scheduledDate,
-      notificationDetails: details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
+    try {
+      await _notifications.zonedSchedule(
+        id: transaction.id!,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (e) {
+      // Silently fail if exact alarm permission is not granted
+      // The transaction will still be saved, just without notification
+      print('Failed to schedule notification: $e');
+    }
   }
 
   Future<void> cancelSettlementReminder(int transactionId) async {
-    await _notifications.cancel(id: transactionId);
+    try {
+      await _notifications.cancel(id: transactionId);
+    } catch (e) {
+      // Silently fail if notification cancellation fails
+      print('Failed to cancel notification: $e');
+    }
+  }
+
+  /// Test method to show an immediate notification
+  Future<void> showTestNotification() async {
+    const androidDetails = AndroidNotificationDetails(
+      'test_channel',
+      'Test Notifications',
+      channelDescription: 'Test notifications for debugging',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+
+    const details = NotificationDetails(android: androidDetails);
+
+    try {
+      await _notifications.show(
+        id: 999,
+        title: 'Test Notification',
+        body: 'If you see this, notifications are working! 🎉',
+        notificationDetails: details,
+      );
+    } catch (e) {
+      print('Failed to show test notification: $e');
+    }
   }
 }

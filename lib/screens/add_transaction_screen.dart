@@ -10,6 +10,7 @@ import '../utils/helpers.dart';
 import '../utils/transaction_change_notifier.dart';
 import '../utils/notification_service.dart';
 import '../utils/drive_backup_service.dart';
+import '../widgets/currency_icon.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int userId;
@@ -107,13 +108,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   InputDecoration _inputDecoration(
     BuildContext context, {
     required String label,
-    required IconData icon,
+    Widget? icon,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
     final inputTheme = Theme.of(context).inputDecorationTheme;
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon),
+      prefixIcon: icon,
       filled: true,
       fillColor: inputTheme.fillColor ?? colorScheme.surface,
       labelStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.7)),
@@ -325,7 +326,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 decoration: _inputDecoration(
                   context,
                   label: 'Person Name',
-                  icon: Icons.person,
+                  icon: const Icon(Icons.person),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -342,7 +343,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 decoration: _inputDecoration(
                   context,
                   label: 'Person Contact',
-                  icon: Icons.phone,
+                  icon: const Icon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
                 validator: (value) {
@@ -360,7 +361,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 decoration: _inputDecoration(
                   context,
                   label: 'Amount (PKR)',
-                  icon: Icons.currency_rupee,
+                  icon: const CurrencyIcon(),
                 ),
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -387,7 +388,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 decoration: _inputDecoration(
                   context,
                   label: 'Reason',
-                  icon: Icons.note,
+                  icon: const Icon(Icons.note),
                 ),
                 maxLines: 3,
                 validator: (value) {

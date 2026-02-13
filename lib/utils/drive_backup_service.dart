@@ -148,6 +148,36 @@ class DriveBackupService {
     return completer.future;
   }
 
+  Future<Map<String, dynamic>?> getBackupInfo() async {
+    final api = await _ensureDriveApi();
+    if (api == null) return null;
+
+    try {
+      final result = await api.files.list(
+        spaces: 'appDataFolder',
+        q: "name = '$backupFileName' and trashed = false",
+        $fields: 'files(id, name, size, modifiedTime, createdTime)',
+        pageSize: 1,
+      );
+
+      if (result.files == null || result.files!.isEmpty) {
+        return null;
+      }
+
+      final file = result.files!.first;
+      return {
+        'exists': true,
+        'name': file.name ?? backupFileName,
+        'size': file.size != null ? int.parse(file.size!) : 0,
+        'modifiedTime': file.modifiedTime,
+        'createdTime': file.createdTime,
+      };
+    } catch (e) {
+      debugPrint('Error getting backup info: $e');
+      return null;
+    }
+  }
+
   // Auto-backup methods
   Future<bool> autoBackupIfNeeded() async {
     try {

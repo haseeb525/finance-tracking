@@ -9,6 +9,7 @@ import '../utils/helpers.dart';
 import '../utils/transaction_change_notifier.dart';
 import '../utils/notification_service.dart';
 import '../utils/drive_backup_service.dart';
+import '../widgets/currency_icon.dart';
 import 'add_transaction_screen.dart';
 
 class TransactionDetailScreen extends StatefulWidget {
@@ -66,6 +67,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
         }
         // Notify dashboard of change
         context.read<TransactionChangeNotifier>().notifyTransactionUpdated();
+
+        // Auto backup after status change
+        DriveBackupService.instance.autoBackupNow();
+
+        // Navigate back to dashboard for better UX
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -112,6 +121,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
               _transaction.id!,
             );
           }
+          // Trigger auto-backup after deletion
+          DriveBackupService.instance.autoBackupNow();
           Navigator.pop(context, true);
         }
       } catch (e) {
@@ -187,7 +198,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.r),
                     ),
-                    prefixIcon: const Icon(Icons.currency_rupee),
+                    prefixIcon: const CurrencyIcon(),
                   ),
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
@@ -330,6 +341,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                           .notifyTransactionUpdated();
                       // Trigger auto-backup
                       DriveBackupService.instance.autoBackupNow();
+
+                      // Navigate back to dashboard if fully settled
+                      if (isFullySettled) {
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          if (mounted && context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        });
+                      }
                     }
                   }
                 } catch (e) {
