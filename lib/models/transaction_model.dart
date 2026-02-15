@@ -11,6 +11,7 @@ class TransactionModel {
   final bool isSettled;
   final double settledAmount; // Amount already settled (partial)
   final String? nextSettlementDate; // Next expected settlement date
+  final String? settlementDetails; // Details for full settlement
   final String createdAt;
 
   TransactionModel({
@@ -26,6 +27,7 @@ class TransactionModel {
     required this.isSettled,
     this.settledAmount = 0.0,
     this.nextSettlementDate,
+    this.settlementDetails,
     required this.createdAt,
   });
 
@@ -43,6 +45,7 @@ class TransactionModel {
       'is_settled': isSettled ? 1 : 0,
       'settled_amount': settledAmount,
       'next_settlement_date': nextSettlementDate,
+      'settlement_details': settlementDetails,
       'created_at': createdAt,
     };
   }
@@ -61,6 +64,7 @@ class TransactionModel {
       isSettled: map['is_settled'] == 1,
       settledAmount: (map['settled_amount'] ?? 0.0).toDouble(),
       nextSettlementDate: map['next_settlement_date'],
+      settlementDetails: map['settlement_details'],
       createdAt: map['created_at'],
     );
   }
@@ -78,6 +82,7 @@ class TransactionModel {
     bool? isSettled,
     double? settledAmount,
     String? nextSettlementDate,
+    String? settlementDetails,
     String? createdAt,
   }) {
     return TransactionModel(
@@ -94,6 +99,7 @@ class TransactionModel {
       isSettled: isSettled ?? this.isSettled,
       settledAmount: settledAmount ?? this.settledAmount,
       nextSettlementDate: nextSettlementDate ?? this.nextSettlementDate,
+      settlementDetails: settlementDetails ?? this.settlementDetails,
       createdAt: createdAt ?? this.createdAt,
     );
   }

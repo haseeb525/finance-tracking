@@ -42,28 +42,81 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
     }
   }
 
-  Future<void> _toggleSettle() async {
+  Future<void> _markAsSettled() async {
     try {
-      final updated = _transaction.copyWith(isSettled: !_transaction.isSettled);
-      await DatabaseHelper.instance.updateTransaction(updated);
+      String? details;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(
+            'Mark as Fully Settled',
+            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Total Amount to Settle: ${Helpers.formatCurrency(_transaction.amount)}',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Settlement Details',
+                    hintText: 'e.g., Payment method, reference number',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  maxLines: 3,
+                  onChanged: (value) => details = value,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(fontSize: 14.sp)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Settle', style: TextStyle(fontSize: 14.sp)),
+            ),
+          ],
+        ),
+      );
 
+      if (confirmed != true) return;
+
+      if (details == null || details!.trim().isEmpty) {
+        if (mounted) {
+          Helpers.showSnackBar(
+            context,
+            'Please enter settlement details',
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      final updated = _transaction.copyWith(
+        isSettled: true,
+        settlementDetails: details!.trim(),
+      );
+      await DatabaseHelper.instance.updateTransaction(updated);
       setState(() => _transaction = updated);
 
       if (mounted) {
-        Helpers.showSnackBar(
-          context,
-          _transaction.isSettled ? 'Marked as settled' : 'Marked as unsettled',
-        );
+        Helpers.showSnackBar(context, 'Transaction marked as settled');
         if (_transaction.id != null) {
-          if (_transaction.isSettled) {
-            await NotificationService.instance.cancelSettlementReminder(
-              _transaction.id!,
-            );
-          } else if (_transaction.expectedSettlementDate != null) {
-            await NotificationService.instance.scheduleSettlementReminder(
-              _transaction,
-            );
-          }
+          await NotificationService.instance.cancelSettlementReminder(
+            _transaction.id!,
+          );
         }
         // Notify dashboard of change
         context.read<TransactionChangeNotifier>().notifyTransactionUpdated();
@@ -156,6 +209,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
   Future<void> _showPartialSettlementDialog() async {
     final amountController = TextEditingController();
+    final detailsController = TextEditingController();
     DateTime? nextSettlementDate;
 
     await showDialog<void>(
@@ -205,6 +259,18 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                   ),
                 ),
                 SizedBox(height: 16.h),
+                TextField(
+                  controller: detailsController,
+                  decoration: InputDecoration(
+                    labelText: 'Settlement Details',
+                    hintText: 'e.g., Payment method, reference number',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                  ),
+                  maxLines: 3,
+                ),
+                SizedBox(height: 16.h),
                 ListTile(
                   title: Text('Next Settlement Date'),
                   subtitle: Text(
@@ -235,7 +301,6 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                amountController.dispose();
                 Navigator.pop(context);
               },
               child: Text('Cancel', style: TextStyle(fontSize: 14.sp)),
@@ -246,37 +311,40 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     double.tryParse(amountController.text) ?? 0.0;
 
                 if (settledAmount <= 0) {
-                  if (mounted) {
-                    Helpers.showSnackBar(
-                      context,
-                      'Please enter a valid amount',
-                      isError: true,
-                    );
-                  }
+                  Helpers.showSnackBar(
+                    context,
+                    'Please enter a valid amount',
+                    isError: true,
+                  );
                   return;
                 }
 
                 if (nextSettlementDate == null) {
-                  if (mounted) {
-                    Helpers.showSnackBar(
-                      context,
-                      'Please select next settlement date',
-                      isError: true,
-                    );
-                  }
+                  Helpers.showSnackBar(
+                    context,
+                    'Please select next settlement date',
+                    isError: true,
+                  );
+                  return;
+                }
+
+                if (detailsController.text.trim().isEmpty) {
+                  Helpers.showSnackBar(
+                    context,
+                    'Please enter settlement details',
+                    isError: true,
+                  );
                   return;
                 }
 
                 final totalSettledAmount =
                     _transaction.settledAmount + settledAmount;
                 if (totalSettledAmount > _transaction.amount) {
-                  if (mounted) {
-                    Helpers.showSnackBar(
-                      context,
-                      'Total settlement cannot exceed transaction amount',
-                      isError: true,
-                    );
-                  }
+                  Helpers.showSnackBar(
+                    context,
+                    'Total settlement cannot exceed transaction amount',
+                    isError: true,
+                  );
                   return;
                 }
 
@@ -288,11 +356,14 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     ' ',
                   )[0];
 
+                  final settlementDetails = detailsController.text.trim();
+
                   final settlement = PartialSettlementModel(
                     transactionId: _transaction.id!,
                     settledAmount: settledAmount,
                     settlementDate: settlementDateStr,
                     nextSettlementDate: nextDateStr,
+                    settlementDetails: settlementDetails,
                     createdAt: now.toIso8601String(),
                   );
 
@@ -311,13 +382,15 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
 
                   await DatabaseHelper.instance.updateTransaction(updated);
 
+                  // Close dialog first
+                  Navigator.pop(context);
+
                   if (mounted) {
                     setState(() {
                       _transaction = updated;
                     });
                     _loadPartialSettlements();
 
-                    Navigator.pop(context);
                     Helpers.showSnackBar(
                       context,
                       isFullySettled
@@ -335,7 +408,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                     }
 
                     // Notify dashboard of change
-                    if (mounted && context.mounted) {
+                    if (context.mounted) {
                       context
                           .read<TransactionChangeNotifier>()
                           .notifyTransactionUpdated();
@@ -371,8 +444,11 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
           ],
         ),
       ),
-    );
-    amountController.dispose();
+    ).then((_) {
+      // Dispose controllers after dialog closes
+      amountController.dispose();
+      detailsController.dispose();
+    });
   }
 
   @override
@@ -531,6 +607,50 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       ),
                     ),
                   ],
+                  if (_transaction.isSettled &&
+                      _transaction.settlementDetails != null &&
+                      _transaction.settlementDetails!.isNotEmpty) ...[
+                    SizedBox(height: 12.h),
+                    Container(
+                      padding: EdgeInsets.all(12.w),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(10.r),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.info,
+                                size: 18.sp,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Settlement Details',
+                                style: TextStyle(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            _transaction.settlementDetails!,
+                            style: TextStyle(fontSize: 12.sp),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   SizedBox(height: 24.h),
 
                   // Settlement Buttons
@@ -569,7 +689,7 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                       children: [
                         Expanded(
                           child: ElevatedButton.icon(
-                            onPressed: _toggleSettle,
+                            onPressed: _markAsSettled,
                             icon: const Icon(Icons.check, color: Colors.white),
                             label: Text(
                               'Mark as Settled',
@@ -591,31 +711,8 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                         ),
                       ],
                     ),
-                  ] else ...[
-                    ElevatedButton.icon(
-                      onPressed: _toggleSettle,
-                      icon: const Icon(Icons.replay, color: Colors.white),
-                      label: Text(
-                        'Mark as Unsettled',
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: EdgeInsets.symmetric(
-                          vertical: 16.h,
-                          horizontal: 24.w,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        elevation: 2,
-                      ),
-                    ),
                   ],
+
                   // Partial Settlement History
                   if (_partialSettlements.isNotEmpty) ...[
                     SizedBox(height: 24.h),
@@ -718,6 +815,29 @@ class _TransactionDetailScreenState extends State<TransactionDetailScreen> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ],
+                              if (settlement.settlementDetails != null &&
+                                  settlement.settlementDetails!.isNotEmpty) ...[
+                                SizedBox(height: 8.h),
+                                Text(
+                                  'Details:',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  settlement.settlementDetails!,
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ],

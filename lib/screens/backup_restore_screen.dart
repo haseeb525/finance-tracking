@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../utils/app_theme.dart';
 import '../utils/helpers.dart';
 import '../utils/drive_backup_service.dart';
-import '../utils/transaction_change_notifier.dart';
-import '../utils/notification_service.dart';
 
 class BackupRestoreScreen extends StatefulWidget {
   const BackupRestoreScreen({super.key});
@@ -57,70 +54,16 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     try {
       await DriveBackupService.instance.signOut();
       if (mounted) {
-        setState(() => _email = null);
+        setState(() {
+          _email = null;
+          _backupInfo = null;
+        });
       }
     } catch (e) {
       if (mounted) {
         Helpers.showSnackBar(
           context,
           'Sign-out failed: ${e.toString()}',
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
-
-  Future<void> _backup() async {
-    if (_email == null) {
-      Helpers.showSnackBar(context, 'Please sign in first', isError: true);
-      return;
-    }
-    setState(() => _isBusy = true);
-    try {
-      final ok = await DriveBackupService.instance.backupToDrive();
-      if (!mounted) return;
-      if (ok) {
-        Helpers.showSnackBar(context, 'Backup uploaded to Drive');
-        // Automatically check backup status after successful backup
-        await _checkBackupStatus();
-      } else {
-        Helpers.showSnackBar(context, 'Backup failed', isError: true);
-      }
-    } catch (e) {
-      if (mounted) {
-        Helpers.showSnackBar(
-          context,
-          'Backup failed: ${e.toString()}',
-          isError: true,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isBusy = false);
-    }
-  }
-
-  Future<void> _restore() async {
-    if (_email == null) {
-      Helpers.showSnackBar(context, 'Please sign in first', isError: true);
-      return;
-    }
-    setState(() => _isBusy = true);
-    try {
-      final ok = await DriveBackupService.instance.restoreFromDrive();
-      if (!mounted) return;
-      if (ok) {
-        Helpers.showSnackBar(context, 'Restore completed successfully');
-        context.read<TransactionChangeNotifier>().notifyTransactionUpdated();
-      } else {
-        Helpers.showSnackBar(context, 'No backup file found', isError: true);
-      }
-    } catch (e) {
-      if (mounted) {
-        Helpers.showSnackBar(
-          context,
-          'Restore failed: ${e.toString()}',
           isError: true,
         );
       }
@@ -168,7 +111,7 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Backup & Restore',
+          'Google Drive Account',
           style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
@@ -238,53 +181,6 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ],
               ),
               SizedBox(height: 16.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isBusy ? null : _backup,
-                      icon: const Icon(Icons.cloud_upload, color: Colors.white),
-                      label: Text(
-                        'Backup Now',
-                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isBusy ? null : _restore,
-                      icon: const Icon(
-                        Icons.cloud_download,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        'Restore Now',
-                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
               Row(
                 children: [
                   Expanded(
@@ -373,52 +269,66 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
                 ),
               ],
               SizedBox(height: 24.h),
-              Divider(color: Colors.grey.shade600),
-              SizedBox(height: 16.h),
-              Text(
-                'Test Notifications',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _isBusy
-                          ? null
-                          : () async {
-                              await NotificationService.instance
-                                  .showTestNotification();
-                              if (mounted) {
-                                Helpers.showSnackBar(
-                                  context,
-                                  'Test notification sent! Check your notification panel.',
-                                );
-                              }
-                            },
-                      icon: const Icon(
-                        Icons.notifications_active,
-                        color: Colors.white,
-                      ),
-                      label: Text(
-                        'Test Notification',
-                        style: TextStyle(color: Colors.white, fontSize: 14.sp),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
+              Container(
+                padding: EdgeInsets.all(16.w),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppTheme.darkCard.withOpacity(0.5)
+                      : Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.blue.withOpacity(0.3)
+                        : Colors.blue.shade200,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue,
+                          size: 20.sp,
                         ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Auto Backup & Notifications',
+                          style: TextStyle(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.blue.shade900,
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      '• Automatic backup to Google Drive after every transaction',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                'Backups are stored as a single file in your Google Drive app data.',
-                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                    SizedBox(height: 6.h),
+                    Text(
+                      '• Settlement reminders auto-scheduled for upcoming payments',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      '• Restore from backup when reinstalling the app',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: isDark ? Colors.white70 : Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

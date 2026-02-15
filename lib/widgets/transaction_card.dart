@@ -141,6 +141,38 @@ class TransactionCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    // Show settled amount if partially settled
+                    if (transaction.settledAmount > 0 && !transaction.isSettled)
+                      Padding(
+                        padding: EdgeInsets.only(top: 6.h),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.payments_outlined,
+                              size: 12.sp,
+                              color: Colors.blue,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              'Settled: ${Helpers.formatCurrency(transaction.settledAmount)}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Remaining: ${Helpers.formatCurrency(transaction.amount - transaction.settledAmount)}',
+                              style: TextStyle(
+                                fontSize: 11.sp,
+                                color: Colors.deepOrange,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

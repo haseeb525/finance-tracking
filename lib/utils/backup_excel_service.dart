@@ -119,6 +119,7 @@ class BackupExcelService {
       'is_settled',
       'settled_amount',
       'next_settlement_date',
+      'settlement_details',
       'created_at',
     ];
 
@@ -264,6 +265,16 @@ class BackupExcelService {
             ),
           )
           .value = excel_lib.TextCellValue(
+        transaction.settlementDetails ?? '',
+      );
+      sheet
+          .cell(
+            excel_lib.CellIndex.indexByColumnRow(
+              columnIndex: 13,
+              rowIndex: rowIndex,
+            ),
+          )
+          .value = excel_lib.TextCellValue(
         transaction.createdAt,
       );
     }
@@ -280,6 +291,7 @@ class BackupExcelService {
       'settled_amount',
       'settlement_date',
       'next_settlement_date',
+      'settlement_details',
       'created_at',
     ];
 
@@ -355,6 +367,16 @@ class BackupExcelService {
             ),
           )
           .value = excel_lib.TextCellValue(
+        settlement.settlementDetails ?? '',
+      );
+      sheet
+          .cell(
+            excel_lib.CellIndex.indexByColumnRow(
+              columnIndex: 6,
+              rowIndex: rowIndex,
+            ),
+          )
+          .value = excel_lib.TextCellValue(
         settlement.createdAt,
       );
     }
@@ -393,7 +415,8 @@ class BackupExcelService {
       final isSettled = _readBool(row, 9);
       final settledAmount = _readDouble(row, 10);
       final nextSettlementDate = _readString(row, 11);
-      final createdAt = _readString(row, 12) ?? '';
+      final settlementDetails = _readString(row, 12);
+      final createdAt = _readString(row, 13) ?? _readString(row, 12) ?? '';
 
       if (userId == 0 || transactionType.isEmpty || createdAt.isEmpty) {
         continue;
@@ -413,6 +436,7 @@ class BackupExcelService {
           isSettled: isSettled,
           settledAmount: settledAmount,
           nextSettlementDate: _normalizeOptional(nextSettlementDate),
+          settlementDetails: _normalizeOptional(settlementDetails),
           createdAt: createdAt,
         ),
       );
@@ -429,7 +453,8 @@ class BackupExcelService {
       final settledAmount = _readDouble(row, 2);
       final settlementDate = _readString(row, 3) ?? '';
       final nextSettlementDate = _readString(row, 4);
-      final createdAt = _readString(row, 5) ?? '';
+      final settlementDetails = _readString(row, 5);
+      final createdAt = _readString(row, 6) ?? '';
 
       if (transactionId == 0 || settlementDate.isEmpty || createdAt.isEmpty) {
         continue;
@@ -442,6 +467,7 @@ class BackupExcelService {
           settledAmount: settledAmount,
           settlementDate: settlementDate,
           nextSettlementDate: _normalizeOptional(nextSettlementDate),
+          settlementDetails: _normalizeOptional(settlementDetails),
           createdAt: createdAt,
         ),
       );

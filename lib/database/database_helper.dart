@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -57,6 +57,7 @@ class DatabaseHelper {
         is_settled $intType,
         settled_amount $realType DEFAULT 0.0,
         next_settlement_date $nullableTextType,
+        settlement_details $nullableTextType,
         created_at $textType,
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
@@ -69,6 +70,7 @@ class DatabaseHelper {
         settled_amount $realType,
         settlement_date $textType,
         next_settlement_date $nullableTextType,
+        settlement_details $nullableTextType,
         created_at $textType,
         FOREIGN KEY (transaction_id) REFERENCES transactions (id)
       )
@@ -97,10 +99,23 @@ class DatabaseHelper {
           settled_amount REAL NOT NULL,
           settlement_date TEXT NOT NULL,
           next_settlement_date TEXT,
+          settlement_details TEXT,
           created_at TEXT NOT NULL,
           FOREIGN KEY (transaction_id) REFERENCES transactions (id)
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      // Add settlement_details column to existing partial_settlements table
+      await db.execute(
+        'ALTER TABLE partial_settlements ADD COLUMN settlement_details TEXT',
+      );
+    }
+    if (oldVersion < 5) {
+      // Add settlement_details column to transactions table for full settlements
+      await db.execute(
+        'ALTER TABLE transactions ADD COLUMN settlement_details TEXT',
+      );
     }
   }
 
@@ -230,13 +245,14 @@ class DatabaseHelper {
   Future<Map<String, double>> getSummary(int userId) async {
     final db = await database;
 
+    // Calculate remaining balance (amount - settled_amount) for unsettled transactions
     final givenResult = await db.rawQuery(
-      'SELECT SUM(amount) as total FROM transactions WHERE user_id = ? AND transaction_type = ? AND is_settled = 0',
+      'SELECT SUM(amount - settled_amount) as total FROM transactions WHERE user_id = ? AND transaction_type = ? AND is_settled = 0',
       [userId, 'GIVEN'],
     );
 
     final takenResult = await db.rawQuery(
-      'SELECT SUM(amount) as total FROM transactions WHERE user_id = ? AND transaction_type = ? AND is_settled = 0',
+      'SELECT SUM(amount - settled_amount) as total FROM transactions WHERE user_id = ? AND transaction_type = ? AND is_settled = 0',
       [userId, 'TAKEN'],
     );
 

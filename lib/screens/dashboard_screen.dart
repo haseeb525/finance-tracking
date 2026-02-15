@@ -16,6 +16,8 @@ import 'backup_restore_screen.dart';
 import 'google_signin_screen.dart';
 import 'transaction_list_screen.dart';
 import 'report_generation_screen.dart';
+import 'settled_transactions_screen.dart';
+import 'typed_transactions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final int userId;
@@ -223,25 +225,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
               size: 24.sp,
             ),
             onPressed: _navigateToBackupRestore,
-            tooltip: 'Backup & Restore',
+            tooltip: 'Google Drive',
           ),
           const ThemeToggle(),
-          PopupMenuButton(
+          PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'signout') {
                 _signOut();
+              } else if (value == 'settled') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        SettledTransactionsScreen(userId: widget.userId),
+                  ),
+                );
               }
             },
-            itemBuilder: (context) => [
-              PopupMenuItem(
+            itemBuilder: (context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'settled',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, size: 18, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text(
+                      'Settled Transactions',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
                 value: 'signout',
                 child: Row(
                   children: [
-                    Icon(Icons.logout, size: 18.sp, color: Colors.red),
-                    SizedBox(width: 8.w),
+                    Icon(Icons.logout, size: 18, color: Colors.red),
+                    SizedBox(width: 8),
                     Text(
                       'Sign Out',
-                      style: TextStyle(color: Colors.red, fontSize: 14.sp),
+                      style: TextStyle(color: Colors.red, fontSize: 14),
                     ),
                   ],
                 ),
@@ -276,22 +300,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: _buildSummaryCard(
-                              title: 'Money Given',
-                              amount: _totalGiven,
-                              icon: Icons.arrow_upward_rounded,
-                              color: const Color(0xFFFF6B6B),
-                              isDark: isDark,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        TypedTransactionsScreen(
+                                          userId: widget.userId,
+                                          transactionType:
+                                              AppConstants.transactionTypeGiven,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: _buildSummaryCard(
+                                title: 'Money Given',
+                                amount: _totalGiven,
+                                icon: Icons.arrow_upward_rounded,
+                                color: const Color(0xFFFF6B6B),
+                                isDark: isDark,
+                              ),
                             ),
                           ),
                           SizedBox(width: 12.w),
                           Expanded(
-                            child: _buildSummaryCard(
-                              title: 'Money Taken',
-                              amount: _totalTaken,
-                              icon: Icons.arrow_downward_rounded,
-                              color: const Color(0xFF4ECDC4),
-                              isDark: isDark,
+                            child: GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        TypedTransactionsScreen(
+                                          userId: widget.userId,
+                                          transactionType:
+                                              AppConstants.transactionTypeTaken,
+                                        ),
+                                  ),
+                                );
+                              },
+                              child: _buildSummaryCard(
+                                title: 'Money Taken',
+                                amount: _totalTaken,
+                                icon: Icons.arrow_downward_rounded,
+                                color: const Color(0xFF4ECDC4),
+                                isDark: isDark,
+                              ),
                             ),
                           ),
                         ],
@@ -446,7 +500,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     ),
                                   ),
                                   child: Text(
-                                    isPositive ? 'You Owe' : 'Owed to You',
+                                    isPositive ? 'To Pay' : 'To Receive',
                                     style: TextStyle(
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.bold,

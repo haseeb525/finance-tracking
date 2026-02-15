@@ -4,6 +4,7 @@ class PartialSettlementModel {
   final double settledAmount;
   final String settlementDate;
   final String? nextSettlementDate;
+  final String? settlementDetails;
   final String createdAt;
 
   PartialSettlementModel({
@@ -12,6 +13,7 @@ class PartialSettlementModel {
     required this.settledAmount,
     required this.settlementDate,
     this.nextSettlementDate,
+    this.settlementDetails,
     required this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class PartialSettlementModel {
       'settled_amount': settledAmount,
       'settlement_date': settlementDate,
       'next_settlement_date': nextSettlementDate,
+      'settlement_details': settlementDetails,
       'created_at': createdAt,
     };
   }
@@ -33,6 +36,7 @@ class PartialSettlementModel {
       settledAmount: map['settled_amount'],
       settlementDate: map['settlement_date'],
       nextSettlementDate: map['next_settlement_date'],
+      settlementDetails: map['settlement_details'],
       createdAt: map['created_at'],
     );
   }
@@ -43,6 +47,7 @@ class PartialSettlementModel {
     double? settledAmount,
     String? settlementDate,
     String? nextSettlementDate,
+    String? settlementDetails,
     String? createdAt,
   }) {
     return PartialSettlementModel(
@@ -51,6 +56,7 @@ class PartialSettlementModel {
       settledAmount: settledAmount ?? this.settledAmount,
       settlementDate: settlementDate ?? this.settlementDate,
       nextSettlementDate: nextSettlementDate ?? this.nextSettlementDate,
+      settlementDetails: settlementDetails ?? this.settlementDetails,
       createdAt: createdAt ?? this.createdAt,
     );
   }
