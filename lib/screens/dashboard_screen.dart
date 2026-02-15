@@ -195,90 +195,127 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final netBalance = _totalTaken - _totalGiven;
     final isPositive = netBalance >= 0;
 
+    // Extract username before @ symbol
+    final displayName = widget.username.contains('@')
+        ? widget.username.split('@').first
+        : widget.username;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Welcome, ${widget.username}',
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.assessment_rounded,
-              color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,
-              size: 24.sp,
-            ),
-            onPressed: _navigateToReports,
-            tooltip: 'Generate Reports',
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.cloud_sync,
-              color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,
-              size: 24.sp,
-            ),
-            onPressed: _navigateToBackupRestore,
-            tooltip: 'Google Drive',
-          ),
-          const ThemeToggle(),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'signout') {
-                _signOut();
-              } else if (value == 'settled') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SettledTransactionsScreen(userId: widget.userId),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(95.h),
+        child: AppBar(
+          elevation: 0,
+          flexibleSpace: SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Welcome message row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Welcome, $displayName',
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              }
-            },
-            itemBuilder: (context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'settled',
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle, size: 18, color: Colors.green),
-                    SizedBox(width: 8),
-                    Text(
-                      'Settled Transactions',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
+                  SizedBox(height: 4.h),
+                  // Action buttons row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.assessment_rounded,
+                          color: isDark
+                              ? AppTheme.neonBlue
+                              : AppTheme.primaryLight,
+                          size: 24.sp,
+                        ),
+                        onPressed: _navigateToReports,
+                        tooltip: 'Generate Reports',
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.cloud_sync,
+                          color: isDark
+                              ? AppTheme.neonBlue
+                              : AppTheme.primaryLight,
+                          size: 24.sp,
+                        ),
+                        onPressed: _navigateToBackupRestore,
+                        tooltip: 'Google Drive',
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.check_circle_outline,
+                          color: isDark
+                              ? AppTheme.neonBlue
+                              : AppTheme.primaryLight,
+                          size: 24.sp,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SettledTransactionsScreen(
+                                userId: widget.userId,
+                              ),
+                            ),
+                          );
+                        },
+                        tooltip: 'Settled Transactions',
+                      ),
+                      const ThemeToggle(),
+                      PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'signout') {
+                            _signOut();
+                          }
+                        },
+                        itemBuilder: (context) => <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'signout',
+                            child: Row(
+                              children: [
+                                Icon(Icons.logout, size: 18, color: Colors.red),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Sign Out',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: isDark
+                              ? AppTheme.neonBlue
+                              : AppTheme.primaryLight,
+                          size: 24.sp,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'signout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 18, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text(
-                      'Sign Out',
-                      style: TextStyle(color: Colors.red, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-            icon: Icon(
-              Icons.more_vert,
-              color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,
-              size: 24.sp,
             ),
           ),
-          SizedBox(width: 8.w),
-        ],
+        ),
       ),
       body: RefreshIndicator(
         color: isDark ? AppTheme.neonBlue : AppTheme.primaryLight,

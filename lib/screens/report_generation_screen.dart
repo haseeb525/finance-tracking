@@ -871,7 +871,48 @@ class _ReportGenerationScreenState extends State<ReportGenerationScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 32.h),
+            SizedBox(height: 16.h),
+
+            // Tip for single day report
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              decoration: BoxDecoration(
+                color: isDark
+                    ? Colors.amber.shade900.withOpacity(0.2)
+                    : Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8.r),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.amber.shade700.withOpacity(0.3)
+                      : Colors.amber.shade200,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.lightbulb_outline,
+                    color: isDark
+                        ? Colors.amber.shade400
+                        : Colors.amber.shade700,
+                    size: 18.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: Text(
+                      'Tip: To generate report for a single day, set the same date for both start and end date',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: isDark
+                            ? Colors.amber.shade200
+                            : Colors.amber.shade900,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
 
             // Generate Button
             ElevatedButton.icon(

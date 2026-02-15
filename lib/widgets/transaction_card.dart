@@ -145,30 +145,45 @@ class TransactionCard extends StatelessWidget {
                     if (transaction.settledAmount > 0 && !transaction.isSettled)
                       Padding(
                         padding: EdgeInsets.only(top: 6.h),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.payments_outlined,
-                              size: 12.sp,
-                              color: Colors.blue,
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.payments_outlined,
+                                  size: 12.sp,
+                                  color: Colors.blue,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Settled: ${Helpers.formatCurrency(transaction.settledAmount)}',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.blue,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              'Settled: ${Helpers.formatCurrency(transaction.settledAmount)}',
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                color: Colors.blue,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Text(
-                              'Remaining: ${Helpers.formatCurrency(transaction.amount - transaction.settledAmount)}',
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                color: Colors.deepOrange,
-                                fontWeight: FontWeight.w500,
-                              ),
+                            SizedBox(height: 4.h),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.pending_outlined,
+                                  size: 12.sp,
+                                  color: Colors.deepOrange,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'Remaining: ${Helpers.formatCurrency(transaction.amount - transaction.settledAmount)}',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.deepOrange,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
