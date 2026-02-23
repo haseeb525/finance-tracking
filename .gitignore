@@ -68,6 +68,7 @@ secrets.dart
 # Backup files
 *.backup
 *.bak
+*Portable.zip
 
 # Generated files
 *.g.dart
