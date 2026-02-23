@@ -52,6 +52,10 @@ dependencies:
   google_sign_in: ^6.1.0
   googleapis: ^15.0.0
   http: ^1.6.0
+  sqflite_common_ffi: ^2.3.6
+  url_launcher: ^6.3.2
+  bitsdojo_window: ^0.1.6
+  window_manager: ^0.5.1
 
 dev_dependencies:
   flutter_test:
@@ -78,6 +82,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/google_logo.png
+    - client_secret_764916282635-9ih2dea53apls6ai1vcp0na6diosh0bu.apps.googleusercontent.com.json
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

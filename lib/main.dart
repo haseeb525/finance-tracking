@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'screens/google_signin_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'utils/constants.dart';
@@ -14,12 +16,39 @@ import 'utils/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+
+  // Initialize window manager for desktop platforms
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    await windowManager.ensureInitialized();
+
+    const WindowOptions windowOptions = WindowOptions(
+      size: Size(1200, 800),
+      minimumSize: Size(800, 600),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+
+  // Skip Firebase on Windows (not fully supported), use custom OAuth instead
+  if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+    await Firebase.initializeApp();
+  }
   await NotificationService.instance.initialize();
-  SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
+
+  // Only set orientation for mobile platforms
+  if (Platform.isAndroid || Platform.isIOS) {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
   runApp(
     MultiProvider(
       providers: [
@@ -38,8 +67,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        // Use different design size for desktop vs mobile
+        final designSize =
+            (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
+            ? const Size(1200, 800) // Desktop design size
+            : const Size(375, 812); // Mobile design size
+
         return ScreenUtilInit(
-          designSize: const Size(375, 812),
+          designSize: designSize,
           minTextAdapt: true,
           splitScreenMode: true,
           builder: (context, child) {
@@ -99,6 +134,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
     return Scaffold(
       backgroundColor: AppConstants.primaryColor,
       body: Center(
@@ -107,19 +145,19 @@ class _SplashScreenState extends State<SplashScreen> {
           children: [
             Icon(
               Icons.account_balance_wallet,
-              size: 100.sp,
+              size: isDesktop ? 80.sp : 100.sp,
               color: Colors.white,
             ),
-            SizedBox(height: 24.h),
+            SizedBox(height: isDesktop ? 16.h : 24.h),
             Text(
               'Finance Tracker',
               style: TextStyle(
-                fontSize: 32.sp,
+                fontSize: isDesktop ? 28.sp : 32.sp,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: isDesktop ? 12.h : 16.h),
             const CircularProgressIndicator(color: Colors.white),
           ],
         ),

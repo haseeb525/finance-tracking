@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import '../database/database_helper.dart';
 import '../models/transaction_model.dart';
 import '../utils/constants.dart';
@@ -192,6 +193,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
     final netBalance = _totalTaken - _totalGiven;
     final isPositive = netBalance >= 0;
 
@@ -202,114 +205,122 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(95.h),
+        preferredSize: Size.fromHeight(isDesktop ? 56.h : 95.h),
         child: AppBar(
           elevation: 0,
           flexibleSpace: SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              padding: EdgeInsets.symmetric(
+                horizontal: 16.w,
+                vertical: isDesktop ? 2.h : 4.h,
+              ),
+              child: Row(
                 children: [
-                  // Welcome message row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Welcome, $displayName',
-                          style: TextStyle(
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                            color: isDark ? Colors.white : Colors.black87,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  Expanded(
+                    child: Text(
+                      'Welcome, $displayName',
+                      style: TextStyle(
+                        fontSize: isDesktop ? 18.sp : 20.sp,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
-                    ],
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  SizedBox(height: 4.h),
-                  // Action buttons row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.assessment_rounded,
-                          color: isDark
-                              ? AppTheme.neonBlue
-                              : AppTheme.primaryLight,
-                          size: 24.sp,
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.assessment_rounded,
+                            color: isDark
+                                ? AppTheme.neonBlue
+                                : AppTheme.primaryLight,
+                            size: isDesktop ? 20.sp : 24.sp,
+                          ),
+                          iconSize: isDesktop ? 20.sp : 24.sp,
+                          padding: EdgeInsets.all(isDesktop ? 4.w : 8.w),
+                          onPressed: _navigateToReports,
+                          tooltip: 'Generate Reports',
                         ),
-                        onPressed: _navigateToReports,
-                        tooltip: 'Generate Reports',
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.cloud_sync,
-                          color: isDark
-                              ? AppTheme.neonBlue
-                              : AppTheme.primaryLight,
-                          size: 24.sp,
+                        IconButton(
+                          icon: Icon(
+                            Icons.cloud_sync,
+                            color: isDark
+                                ? AppTheme.neonBlue
+                                : AppTheme.primaryLight,
+                            size: isDesktop ? 20.sp : 24.sp,
+                          ),
+                          iconSize: isDesktop ? 20.sp : 24.sp,
+                          padding: EdgeInsets.all(isDesktop ? 4.w : 8.w),
+                          onPressed: _navigateToBackupRestore,
+                          tooltip: 'Google Drive',
                         ),
-                        onPressed: _navigateToBackupRestore,
-                        tooltip: 'Google Drive',
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.check_circle_outline,
-                          color: isDark
-                              ? AppTheme.neonBlue
-                              : AppTheme.primaryLight,
-                          size: 24.sp,
+                        IconButton(
+                          icon: Icon(
+                            Icons.check_circle_outline,
+                            color: isDark
+                                ? AppTheme.neonBlue
+                                : AppTheme.primaryLight,
+                            size: isDesktop ? 20.sp : 24.sp,
+                          ),
+                          iconSize: isDesktop ? 20.sp : 24.sp,
+                          padding: EdgeInsets.all(isDesktop ? 4.w : 8.w),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SettledTransactionsScreen(
+                                  userId: widget.userId,
+                                ),
+                              ),
+                            );
+                          },
+                          tooltip: 'Settled Transactions',
                         ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SettledTransactionsScreen(
-                                userId: widget.userId,
+                        const ThemeToggle(),
+                        PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'signout') {
+                              _signOut();
+                            }
+                          },
+                          itemBuilder: (context) => <PopupMenuEntry<String>>[
+                            const PopupMenuItem<String>(
+                              value: 'signout',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.logout,
+                                    size: 18,
+                                    color: Colors.red,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Sign Out',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                        tooltip: 'Settled Transactions',
-                      ),
-                      const ThemeToggle(),
-                      PopupMenuButton<String>(
-                        onSelected: (value) {
-                          if (value == 'signout') {
-                            _signOut();
-                          }
-                        },
-                        itemBuilder: (context) => <PopupMenuEntry<String>>[
-                          const PopupMenuItem<String>(
-                            value: 'signout',
-                            child: Row(
-                              children: [
-                                Icon(Icons.logout, size: 18, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Sign Out',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          ],
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: isDark
+                                ? AppTheme.neonBlue
+                                : AppTheme.primaryLight,
+                            size: isDesktop ? 20.sp : 24.sp,
                           ),
-                        ],
-                        icon: Icon(
-                          Icons.more_vert,
-                          color: isDark
-                              ? AppTheme.neonBlue
-                              : AppTheme.primaryLight,
-                          size: 24.sp,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

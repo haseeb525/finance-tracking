@@ -24,18 +24,16 @@ class _BackupRestoreScreenState extends State<BackupRestoreScreen> {
   }
 
   Future<void> _trySilentSignIn() async {
-    final user = await DriveBackupService.instance.signIn(silently: true);
+    final email = await DriveBackupService.instance.signInEmail(silently: true);
     if (!mounted) return;
-    setState(() => _email = user?.email);
+    setState(() => _email = email);
   }
 
   Future<void> _signIn() async {
     setState(() => _isBusy = true);
     try {
-      final user = await DriveBackupService.instance.signIn();
-      if (mounted) {
-        setState(() => _email = user?.email);
-      }
+      final email = await DriveBackupService.instance.signInEmail();
+      if (mounted) setState(() => _email = email);
     } catch (e) {
       if (mounted) {
         Helpers.showSnackBar(

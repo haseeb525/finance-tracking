@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Name="Finance Tracker" Language="1033" Version="1.0.0.0" Manufacturer="Your Company" UpgradeCode="00000000-0000-0000-0000-000000000000">
+        <Package InstallerVersion="200" Compressed="yes" />
+        <Media Id="1" Cabinet="Finance_Tracker.cab" EmbedCab="yes" />
+
+        <Feature Id="ProductFeature" Title="Finance Tracker" Level="1">
+            <ComponentRef Id="MainExecutable" />
+        </Feature>
+    </Product>
+
+    <Fragment>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLFOLDER" Name="Finance Tracker" />
+            </Directory>
+        </Directory>
+    </Fragment>
+
+    <Fragment>
+        <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="*">
+            <File Id="FinanceTracking" Name="finance_tracking.exe" Source="build\windows\x64\runner\Release\finance_tracking.exe" KeyPath="yes" />
+        </Component>
+    </Fragment>
+</Wix>

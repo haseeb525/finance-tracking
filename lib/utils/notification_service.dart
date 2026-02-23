@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -13,6 +14,12 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> initialize() async {
+    // Skip initialization on desktop platforms
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      tz.initializeTimeZones();
+      return;
+    }
+
     tz.initializeTimeZones();
 
     const androidSettings = AndroidInitializationSettings(

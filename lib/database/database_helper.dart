@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
 import '../models/partial_settlement_model.dart';
@@ -12,20 +15,55 @@ class DatabaseHelper {
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('finance_tracking.db');
-    return _database!;
+    try {
+      _database = await _initDB('finance_tracking.db');
+      return _database!;
+    } catch (e) {
+      print('Failed to initialize database: $e');
+      rethrow;
+    }
   }
 
   Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
+    // Initialize FFI for desktop platforms FIRST
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
 
-    return await openDatabase(
-      path,
-      version: 5,
-      onCreate: _createDB,
-      onUpgrade: _upgradeDB,
-    );
+      // Get application documents directory for desktop
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final dbDir = Directory(join(appDocDir.path, 'FinanceTracker'));
+
+      // Ensure directory exists
+      if (!await dbDir.exists()) {
+        await dbDir.create(recursive: true);
+      }
+
+      final path = join(dbDir.path, filePath);
+
+      try {
+        return await openDatabase(
+          path,
+          version: 5,
+          onCreate: _createDB,
+          onUpgrade: _upgradeDB,
+        );
+      } catch (e) {
+        print('Database error on desktop: $e');
+        rethrow;
+      }
+    } else {
+      // Mobile (Android/iOS) - use standard sqflite
+      final dbPath = await getDatabasesPath();
+      final path = join(dbPath, filePath);
+
+      return await openDatabase(
+        path,
+        version: 5,
+        onCreate: _createDB,
+        onUpgrade: _upgradeDB,
+      );
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -148,9 +186,21 @@ class DatabaseHelper {
   Future<TransactionModel> createTransaction(
     TransactionModel transaction,
   ) async {
-    final db = await database;
-    final id = await db.insert('transactions', transaction.toMap());
-    return transaction.copyWith(id: id);
+    try {
+      final db = await database;
+      print(
+        'Database opened successfully. Attempting to insert transaction...',
+      );
+      final id = await db.insert('transactions', transaction.toMap());
+      print('Transaction inserted successfully with id: $id');
+      return transaction.copyWith(id: id);
+    } on DatabaseException catch (de) {
+      print('Database error during transaction creation: ${de.toString()}');
+      throw Exception('Failed to create transaction: ${de.toString()}');
+    } catch (e) {
+      print('Unexpected error during transaction creation: $e');
+      throw Exception('Failed to create transaction: $e');
+    }
   }
 
   Future<List<TransactionModel>> getTransactions(int userId) async {
@@ -228,18 +278,44 @@ class DatabaseHelper {
   }
 
   Future<int> updateTransaction(TransactionModel transaction) async {
-    final db = await database;
-    return db.update(
-      'transactions',
-      transaction.toMap(),
-      where: 'id = ?',
-      whereArgs: [transaction.id],
-    );
+    try {
+      final db = await database;
+      print('Updating transaction id: ${transaction.id}');
+      final result = await db.update(
+        'transactions',
+        transaction.toMap(),
+        where: 'id = ?',
+        whereArgs: [transaction.id],
+      );
+      print('Transaction updated successfully. Rows affected: $result');
+      return result;
+    } on DatabaseException catch (de) {
+      print('Database error during update: ${de.toString()}');
+      throw Exception('Failed to update transaction: ${de.toString()}');
+    } catch (e) {
+      print('Unexpected error during update: $e');
+      throw Exception('Failed to update transaction: $e');
+    }
   }
 
   Future<int> deleteTransaction(int id) async {
-    final db = await database;
-    return await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+    try {
+      final db = await database;
+      print('Deleting transaction id: $id');
+      final result = await db.delete(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      print('Transaction deleted successfully. Rows affected: $result');
+      return result;
+    } on DatabaseException catch (de) {
+      print('Database error during delete: ${de.toString()}');
+      throw Exception('Failed to delete transaction: ${de.toString()}');
+    } catch (e) {
+      print('Unexpected error during delete: $e');
+      throw Exception('Failed to delete transaction: $e');
+    }
   }
 
   Future<Map<String, double>> getSummary(int userId) async {

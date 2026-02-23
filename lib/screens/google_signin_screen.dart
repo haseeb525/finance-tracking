@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import '../database/database_helper.dart';
 import '../models/user_model.dart';
 import '../utils/constants.dart';
@@ -26,26 +27,26 @@ class _GoogleSignInScreenState extends State<GoogleSignInScreen> {
 
   Future<void> _tryAutoLogin() async {
     // Try silent sign-in
-    final user = await DriveBackupService.instance.signIn(silently: true);
+    final email = await DriveBackupService.instance.signInEmail(silently: true);
     if (!mounted) return;
 
-    if (user != null) {
-      await _handleSignInSuccess(user.email);
+    if (email != null) {
+      await _handleSignInSuccess(email);
     }
   }
 
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
     try {
-      final user = await DriveBackupService.instance.signIn();
-      if (user == null) {
+      final email = await DriveBackupService.instance.signInEmail();
+      if (email == null) {
         if (mounted) {
           Helpers.showSnackBar(context, 'Sign-in failed', isError: true);
         }
         return;
       }
 
-      await _handleSignInSuccess(user.email);
+      await _handleSignInSuccess(email);
     } catch (e) {
       if (mounted) {
         Helpers.showSnackBar(
@@ -121,83 +122,98 @@ class _GoogleSignInScreenState extends State<GoogleSignInScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDesktop =
+        Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
     return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.account_balance_wallet,
-                size: 80.sp,
-                color: isDark ? Colors.blue.shade300 : Colors.blue,
-              ),
-              SizedBox(height: 32.h),
-              Text(
-                'Finance Tracker',
-                style: TextStyle(fontSize: 32.sp, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12.h),
-              Text(
-                'Track your finances and settlements',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 48.h),
-              if (_isLoading)
-                Column(
-                  children: [
-                    CircularProgressIndicator(
-                      color: isDark ? Colors.blue.shade300 : Colors.blue,
-                    ),
-                    SizedBox(height: 16.h),
-                    Text('Signing in...', style: TextStyle(fontSize: 14.sp)),
-                  ],
-                )
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: _signIn,
-                    icon: Container(
-                      width: 36.w,
-                      height: 36.h,
-                      padding: EdgeInsets.all(5.w),
-                      decoration: BoxDecoration(
-                        color: Colors.transparent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.w),
+      body: SingleChildScrollView(
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isDesktop) SizedBox(height: 40.h),
+                Icon(
+                  Icons.account_balance_wallet,
+                  size: isDesktop ? 60.sp : 80.sp,
+                  color: isDark ? Colors.blue.shade300 : Colors.blue,
+                ),
+                SizedBox(height: isDesktop ? 20.h : 32.h),
+                Text(
+                  'Finance Tracker',
+                  style: TextStyle(
+                    fontSize: isDesktop ? 28.sp : 32.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Text(
+                  'Track your finances and settlements',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: isDesktop ? 30.h : 48.h),
+                if (_isLoading)
+                  Column(
+                    children: [
+                      CircularProgressIndicator(
+                        color: isDark ? Colors.blue.shade300 : Colors.blue,
                       ),
-                      child: Image.asset(
-                        'assets/google_logo.png',
-                        fit: BoxFit.contain,
+                      SizedBox(height: 16.h),
+                      Text('Signing in...', style: TextStyle(fontSize: 14.sp)),
+                    ],
+                  )
+                else
+                  SizedBox(
+                    width: isDesktop ? 350.w : double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _signIn,
+                      icon: Container(
+                        width: 36.w,
+                        height: 36.h,
+                        padding: EdgeInsets.all(5.w),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.w),
+                        ),
+                        child: Image.asset(
+                          'assets/google_logo.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
-                    ),
-                    label: Text(
-                      'Sign in with Google',
-                      style: TextStyle(fontSize: 16.sp, color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: EdgeInsets.symmetric(
-                        vertical: 14.h,
-                        horizontal: 20.w,
+                      label: Text(
+                        'Sign in with Google',
+                        style: TextStyle(fontSize: 16.sp, color: Colors.white),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.r),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        padding: EdgeInsets.symmetric(
+                          vertical: 14.h,
+                          horizontal: 20.w,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
                       ),
                     ),
                   ),
+                SizedBox(height: isDesktop ? 20.h : 32.h),
+                Text(
+                  'Your data is automatically synced to Google Drive',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.grey.shade500,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              SizedBox(height: 32.h),
-              Text(
-                'Your data is automatically synced to Google Drive',
-                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade500),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                if (isDesktop) SizedBox(height: 40.h),
+              ],
+            ),
           ),
         ),
       ),
